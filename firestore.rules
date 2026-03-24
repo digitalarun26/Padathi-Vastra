@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: products
+    // Fields: name, price, description, fabric, category, color, imageUrl, createdAt
+    //
+    // Collection: users
+    // Fields: name, email, role (user/admin), createdAt
+    //
+    // Collection: orders
+    // Fields: userId, products (array), total, status, address, mapLocation, createdAt
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "arunkumartechsolutions@gmail.com" ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isOrderOwner(orderData) {
+      return isAuthenticated() && request.auth.uid == orderData.userId;
+    }
+
+    // Domain Validators
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.price is number && data.price >= 0 &&
+             data.category is string &&
+             data.imageUrl is string;
+    }
+
+    function isValidUser(data) {
+      return data.email is string &&
+             data.role in ['user', 'admin'];
+    }
+
+    function isValidOrder(data) {
+      return data.userId == request.auth.uid &&
+             data.products is list &&
+             data.total is number &&
+             data.status in ['pending', 'shipped', 'delivered'] &&
+             data.address is string && data.address.size() > 0;
+    }
+
+    // Rules
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidProduct(request.resource.data);
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == 'user' || 
+                     (request.resource.data.role == 'admin' && request.auth.token.email == "arunkumartechsolutions@gmail.com"));
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (isOrderOwner(resource.data) || isAdmin());
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+  }
+}

@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
+  --color-brand-primary: #5A1212; /* Deep Maroon */
+  --color-brand-secondary: #D4AF37; /* Gold */
+  --color-brand-accent: #F5F2ED; /* Off-white */
+}
+
+@layer base {
+  body {
+    @apply bg-brand-accent text-gray-900 font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+.glass-effect {
+  @apply bg-white/80 backdrop-blur-md border border-white/20;
+}
+
+.btn-primary {
+  @apply bg-brand-primary text-white px-6 py-2 rounded-full hover:bg-brand-primary/90 transition-all duration-300 font-medium;
+}
+
+.btn-secondary {
+  @apply border-2 border-brand-primary text-brand-primary px-6 py-2 rounded-full hover:bg-brand-primary hover:text-white transition-all duration-300 font-medium;
+}
